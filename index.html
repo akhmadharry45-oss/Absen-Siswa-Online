@@ -17,10 +17,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
 <style>
   :root{
     --bg:#1E1E1E;
@@ -404,7 +400,7 @@
 
 <div class="topbar">
   <button class="menu-btn" id="menuBtn">☰</button>
-  <div class="topbar-title" id="topbarTitle">Absen Kelas</div>
+  <div class="topbar-title" id="topbarTitle">Absen Sekolah</div>
   <div class="topbar-clock" id="clockLabel"></div>
 </div>
 
@@ -426,7 +422,7 @@
     <button data-tab="settings" class="side-item"><span class="icon-dot gray">⚙️</span>Pengaturan</button>
     <button data-tab="about" class="side-item"><span class="icon-dot gray">ℹ️</span>Tentang</button>
   </nav>
-  <div class="sidebar-footer" id="sidebarFooter">Absen Kelas<br>Design by Akhmad Fitra Harry, S.Pd</div>
+  <div class="sidebar-footer" id="sidebarFooter">Absen Sekolah</div>
 </aside>
 
 <div class="content">
@@ -475,7 +471,6 @@
       <div id="calHolidayList" style="margin-top:12px; font-size:13px; color:var(--muted); line-height:1.6;"></div>
     </div>
 
-    <p style="text-align:center; font-size:12.5px; color:var(--muted); margin-top:20px;">Dibuat oleh Akhmad Fitra Harry, S.Pd</p>
   </section>
 
   <!-- SCAN TAB (Absensi) -->
@@ -591,7 +586,9 @@
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
       <button class="btn-primary" id="downloadMonthlyBtn">Unduh rekap (CSV)</button>
       <button class="btn-primary" id="downloadMonthlyXlsxBtn">Unduh Excel (.xlsx)</button>
+      <button class="btn-primary" id="makeSheetRekapBtn" style="background:#555;">Buat Rekap di Google Sheets</button>
     </div>
+    <p class="recap-hint" id="rekapSheetMsg" style="display:none;"></p>
     <div class="summary-row" id="monthlySummaryRow"></div>
     <table class="recap">
       <thead><tr><th>No</th><th>Nama</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpa</th></tr></thead>
@@ -603,12 +600,12 @@
   <section class="panel" id="panel-settings">
     <div class="card" id="installCard" style="margin-bottom:14px;">
       <h3 class="section-title">Pasang Aplikasi di Handphone</h3>
-      <p class="scan-hint" id="installHint" style="text-align:left; margin:0 0 12px;">Pasang agar ada ikon "Absen Kelas" di layar utama dan terbuka seperti aplikasi biasa.</p>
+      <p class="scan-hint" id="installHint" style="text-align:left; margin:0 0 12px;">Pasang agar ada ikon "Absen Sekolah" di layar utama dan terbuka seperti aplikasi biasa.</p>
       <button class="btn-primary" id="installBtn" style="width:100%; display:none;">Pasang Aplikasi</button>
     </div>
     <div class="card" style="margin-bottom:14px;">
-      <h3 class="section-title">Kelas &amp; Database (Firebase)</h3>
-      <p class="scan-hint" id="fbStatus" style="text-align:left; margin:0 0 10px;"></p>
+      <h3 class="section-title">Kelas (Link &amp; Kode)</h3>
+      <p class="scan-hint" id="classStatus" style="text-align:left; margin:0 0 10px;"></p>
       <label class="setup-label">Link kelas ini (bagikan ke guru/perangkat lain)</label>
       <input type="text" id="classLinkInput" class="text-input" readonly>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
@@ -643,7 +640,7 @@
     </div>
     <div class="card">
       <h3 class="section-title">Hubungkan ke Google Sheets</h3>
-      <p class="scan-hint" style="text-align:left; margin:0 0 14px;">Tempel URL Web App (diakhiri /exec) dari Apps Script milik kelas ini agar absen tersimpan online di Google Sheets kelas ini dan bisa diakses dari perangkat lain. Setiap kelas memakai Google Sheets sendiri.</p>
+      <p class="scan-hint" style="text-align:left; margin:0 0 14px;">Tempel URL Web App (diakhiri /exec) dari Apps Script agar absen tersimpan online di Google Sheets dan bisa dibuka dari perangkat lain. Satu Google Sheets bisa dipakai banyak kelas; setiap kelas otomatis mendapat tab sendiri.</p>
       <input type="text" id="sheetsUrlInput" class="text-input" placeholder="https://script.google.com/macros/s/.../exec">
       <button class="btn-primary" id="saveSheetsUrlBtn" style="width:100%;">Simpan & Hubungkan</button>
       <p class="scan-hint" id="sheetsStatus" style="text-align:left; margin-top:12px;"></p>
@@ -653,11 +650,11 @@
   <!-- ABOUT TAB -->
   <section class="panel" id="panel-about">
     <div class="card about-card">
-      <div class="appname" id="aboutName">Absen Online</div>
+      <div class="appname" id="aboutName">Absen Sekolah</div>
       <p style="font-size:12.5px; color:var(--muted); margin-top:8px;" id="aboutSchool"></p>
       <p style="font-size:12.5px; color:var(--muted); margin-top:14px;">Scan QR, catat kehadiran, dan lihat rekap harian/bulanan secara otomatis — tersimpan di perangkat dan Google Sheets.</p>
-      <div class="credit">Dibuat oleh Akhmad Fitra Harry, S.Pd</div>
-      <div class="credit-role">Wali Kelas 3 — SD Negeri 1 Barabai Timur</div>
+      <div class="credit">Absen Sekolah</div>
+      <div class="credit-role">Aplikasi absensi kelas berbasis QR</div>
     </div>
   </section>
 
@@ -703,7 +700,7 @@
     <label class="setup-label">Sapaan di Beranda (opsional)</label>
     <input type="text" id="setupSapaan" class="text-input" placeholder="contoh: Ibu Siti">
     <label class="setup-label">Kota (untuk cuaca, opsional)</label>
-    <input type="text" id="setupKota" class="text-input" placeholder="contoh: Barabai">
+    <input type="text" id="setupKota" class="text-input" placeholder="contoh: Makassar">
     <div id="setupRosterWrap">
       <label class="setup-label">Daftar nama siswa (satu nama per baris)</label>
       <textarea id="setupRoster" class="text-input" rows="6" placeholder="Nama siswa 1&#10;Nama siswa 2&#10;Nama siswa 3"></textarea>
@@ -719,16 +716,15 @@
   </div>
 </div>
 
-<div class="design-credit">Design by Akhmad Fitra Harry, S.Pd</div>
+<div class="design-credit">Absen Sekolah</div>
 <script>
 window.addEventListener("error", (e)=>{
   console.error("Error tidak tertangani:", e.error || e.message);
 });
 try {
 let CODE_PREFIX = "ABSEN-";
-const LEGACY_PROFILE = { kelas:"Kelas 3", sekolah:"SD Negeri 1 Barabai Timur", guru:"Akhmad Fitra Harry, S.Pd", sapaan:"Bapak Fitra", kota:"Barabai", lat:-2.583, lon:115.383, prefix:"ABSEN3SDN1BT-" };
 function saveProfileObj(p){ try{ localStorage.setItem("classProfile", JSON.stringify(p)); }catch(e){} }
-function hasLegacyData(){
+function hasLocalData(){
   try{
     if(localStorage.getItem("studentsRoster") || localStorage.getItem("sheetsUrl")) return true;
     for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if(k && k.startsWith("absensi:")) return true; }
@@ -740,13 +736,12 @@ function loadProfile(){
     const raw = localStorage.getItem("classProfile");
     if(raw){ const p = JSON.parse(raw); if(p && p.kelas) return p; }
   }catch(e){}
-  if(!CLASS_CODE && hasLegacyData()){ saveProfileObj(LEGACY_PROFILE); return { ...LEGACY_PROFILE }; }
   return null;
 }
 // ---------- kode kelas (satu link per kelas: ?kelas=KODE) ----------
 function clearClassCache(){
   try{
-    const fixed = ["classProfile","studentsRoster","nextStudentId","sheetsUrl","log_keluar","configSynced"];
+    const fixed = ["classProfile","studentsRoster","nextStudentId","sheetsUrl","log_keluar","configSynced","pendingQueue"];
     const del = [];
     for(let i=0;i<localStorage.length;i++){
       const k = localStorage.key(i);
@@ -763,192 +758,152 @@ function genClassCode(){
 }
 let CLASS_CODE = "";
 (function resolveClassCode(){
-  let fromUrl = "";
-  try{ fromUrl = (new URLSearchParams(location.search).get("kelas") || "").toUpperCase().replace(/[^A-Z0-9]/g,""); }catch(e){}
+  let fromUrl = "", sUrl = "";
+  try{
+    const qp = new URLSearchParams(location.search);
+    fromUrl = (qp.get("kelas") || "").toUpperCase().replace(/[^A-Z0-9]/g,"");
+    sUrl = (qp.get("s") || "").trim();
+    if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(sUrl)) sUrl = "";
+  }catch(e){}
   let stored = "";
   try{ stored = localStorage.getItem("activeClass") || ""; }catch(e){}
   if(fromUrl.length >= 8 && fromUrl !== stored){
-    if(!stored && hasLegacyData() && !confirm("Perangkat ini masih menyimpan data absen lama yang belum terhubung ke kelas mana pun.\n\nOK = buka kelas dari link ini dan hapus data lama di perangkat\nBatal = tetap pakai data lama")){
+    if(!stored && hasLocalData() && !confirm("Perangkat ini masih menyimpan data absen yang belum terhubung ke kelas mana pun.\n\nOK = buka kelas dari link ini dan hapus data di perangkat\nBatal = tetap pakai data di perangkat")){
       fromUrl = "";
     }else{
       clearClassCache();
     }
   }
   CLASS_CODE = fromUrl.length >= 8 ? fromUrl : stored;
-  try{ if(CLASS_CODE) localStorage.setItem("activeClass", CLASS_CODE); }catch(e){}
+  try{
+    if(CLASS_CODE) localStorage.setItem("activeClass", CLASS_CODE);
+    if(sUrl) localStorage.setItem("sheetsUrl", sUrl);
+  }catch(e){}
 })();
 let PROFILE = loadProfile();
 if(PROFILE && PROFILE.prefix) CODE_PREFIX = PROFILE.prefix;
 function profileView(){ return PROFILE || { kelas:"Kelas", sekolah:"", guru:"", sapaan:"", kota:"" }; }
 function escHtml(t){ return String(t).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function slugName(t){ return String(t||"Kelas").trim().replace(/[^A-Za-z0-9]+/g,"") || "Kelas"; }
-// ---------- Firebase (database utama, realtime antar perangkat) ----------
-let fbDb = null, fbReady = false, fbUnsubs = [];
-function fbConfigured(){
-  return typeof FIREBASE_CONFIG !== "undefined" && FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !/ISI_/i.test(FIREBASE_CONFIG.apiKey) && typeof firebase !== "undefined";
+// ---------- Kelas & Google Sheets (database utama) ----------
+function classLink(){
+  if(!CLASS_CODE) return "";
+  const u = getSheetsUrl();
+  return `${location.origin}${location.pathname}?kelas=${CLASS_CODE}` + (u ? `&s=${encodeURIComponent(u)}` : "");
 }
-async function initFirebase(){
-  if(!fbConfigured()) return false;
-  try{
-    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    await firebase.auth().signInAnonymously();
-    fbDb = firebase.firestore();
-    try{ fbDb.enablePersistence({ synchronizeTabs:true }).catch(()=>{}); }catch(e){}
-    fbReady = true;
-    return true;
-  }catch(e){
-    console.error("Firebase gagal:", e);
-    fbReady = false;
-    return false;
+function ensureClassCode(){
+  if(CLASS_CODE) return;
+  CLASS_CODE = genClassCode();
+  try{ localStorage.setItem("activeClass", CLASS_CODE); }catch(e){}
+}
+function updateClassUi(){
+  const link = document.getElementById("classLinkInput");
+  if(link) link.value = classLink();
+  const st = document.getElementById("classStatus");
+  if(!st) return;
+  if(!getSheetsUrl()) st.textContent = "Google Sheets belum dihubungkan. Data baru tersimpan di perangkat ini saja. Hubungkan di kartu \"Hubungkan ke Google Sheets\" di bawah.";
+  else st.textContent = CLASS_CODE ? `Terhubung ke Google Sheets · Kode kelas: ${CLASS_CODE}` : "Terhubung ke Google Sheets · kelas belum dibuat.";
+}
+
+// antrean kirim (jika sedang offline, dikirim ulang otomatis)
+function getQueue(){ try{ return JSON.parse(localStorage.getItem("pendingQueue") || "[]"); }catch(e){ return []; } }
+function setQueue(q){ try{ localStorage.setItem("pendingQueue", JSON.stringify(q.slice(-500))); }catch(e){} }
+function queueRecord(rec){
+  if(rec.jenis === "config" || rec.jenis === "rekap") return;
+  let q = getQueue();
+  if(rec.status && !rec.jenis) q = q.filter(r=> !(r.status && !r.jenis && r.tanggal === rec.tanggal && String(r.id) === String(rec.id)));
+  q.push(rec); setQueue(q);
+}
+function pendingIds(tanggal){
+  const set = new Set();
+  getQueue().forEach(r=>{
+    if(r.jenis === "bulk" && r.tanggal === tanggal) (r.items || []).forEach(it=> set.add(String(it.id)));
+    else if(r.status && !r.jenis && r.tanggal === tanggal) set.add(String(r.id));
+  });
+  return set;
+}
+async function flushQueue(){
+  if(!getSheetsUrl()) return;
+  const q = getQueue();
+  if(!q.length) return;
+  const rest = [];
+  for(const rec of q){
+    const res = await callSheet(rec);
+    if(!(res && res.ok)) rest.push(rec);
   }
+  setQueue(rest);
 }
-function classRef(){ return fbDb.collection("classes").doc(CLASS_CODE); }
-async function fbWrite(record){
-  if(!fbReady || !CLASS_CODE) return false;
+
+// ambil data hari ini dari Google Sheets secara berkala (sinkron antar perangkat)
+let pollTimer = null, pollBusy = false, pollListener = false;
+async function pollToday(){
+  if(pollBusy || !getSheetsUrl() || !CLASS_CODE || document.hidden) return;
+  pollBusy = true;
   try{
-    if(record.jenis === "config"){
-      await classRef().set({ profile:record.profile, roster:record.roster, sheetsUrl:getSheetsUrl(), updatedAt:firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
-    }else if(record.jenis === "keluar"){
-      if(!record.uid) return false;
-      await classRef().collection("logs").doc(record.uid).set({ tanggal:record.tanggal, waktu:record.waktu || "", id:record.id, nama:record.nama, keterangan:record.keterangan || "" });
-    }else if(record.status){
-      const now = new Date();
-      await classRef().collection("attendance").doc(record.tanggal).set({
-        records:{ [record.id]:{ nama:record.nama, status:record.status, waktu:(record.waktu !== undefined ? record.waktu : `${pad(now.getHours())}:${pad(now.getMinutes())}`) } }
-      }, { merge:true });
-    }
-    return true;
-  }catch(e){ console.error("Firebase gagal menulis:", e); return false; }
-}
-async function fbDeleteLog(uid){
-  if(!fbReady || !CLASS_CODE) return;
-  try{ await classRef().collection("logs").doc(uid).delete(); }catch(e){ console.error(e); }
-}
-function fsRowsFromDoc(date, data){
-  const out = [], r = (data && data.records) || {};
-  Object.keys(r).forEach(id=> out.push({ tanggal:date, id:Number(id), nama:r[id].nama, status:r[id].status, waktu:r[id].waktu || "" }));
-  return out;
-}
-async function fbFetch(params){
-  if(!fbReady || !CLASS_CODE) return null;
-  try{
-    const col = classRef().collection("attendance");
-    if(params.tanggal){
-      const d = await col.doc(params.tanggal).get();
-      return d.exists ? fsRowsFromDoc(d.id, d.data()) : [];
-    }
-    if(params.bulan){
-      const fp = firebase.firestore.FieldPath.documentId();
-      const snap = await col.where(fp, ">=", params.bulan + "-01").where(fp, "<=", params.bulan + "-31").get();
-      const out = [];
-      snap.forEach(d=> out.push(...fsRowsFromDoc(d.id, d.data())));
-      return out;
-    }
-  }catch(e){ console.error("Firebase gagal membaca:", e); }
-  return null;
-}
-async function fbFetchLogs(monthKey){
-  if(!fbReady || !CLASS_CODE) return [];
-  try{
-    const snap = await classRef().collection("logs").where("tanggal", ">=", monthKey + "-01").where("tanggal", "<=", monthKey + "-31").get();
-    const out = []; snap.forEach(d=> out.push({ uid:d.id, ...d.data() }));
-    return out;
-  }catch(e){ console.error(e); return []; }
-}
-function stopFbSubs(){ fbUnsubs.forEach(f=>{ try{ f(); }catch(e){} }); fbUnsubs = []; }
-function startFbSubs(){
-  if(!fbReady || !CLASS_CODE) return;
-  stopFbSubs();
-  const today = todayKey();
-  let homeTimer = null;
-  fbUnsubs.push(classRef().collection("attendance").doc(today).onSnapshot(async snap=>{
-    if(!snap.exists) return;
-    const rows = fsRowsFromDoc(today, snap.data());
-    const data = await loadAttendance(today);
-    let changed = false;
-    rows.forEach(r=>{ if(STATUS[r.status] && data[r.id] !== r.status){ data[r.id] = r.status; changed = true; } });
-    if(!changed) return;
-    await saveAttendance(today, data);
-    currentAttendance = { ...data };
-    renderProgress(); renderManualGrid();
-    if(document.getElementById("panel-home").classList.contains("active")){
-      clearTimeout(homeTimer); homeTimer = setTimeout(()=> renderHome(), 600);
-    }
-  }, err=> console.error(err)));
-  fbUnsubs.push(classRef().collection("logs").where("tanggal", "==", today).onSnapshot(snap=>{
-    let list = [];
-    try{ list = JSON.parse(localStorage.getItem("log_keluar") || "[]"); }catch(e){}
-    const have = new Set(list.map(e=>e.uid));
-    let changed = false;
-    snap.docChanges().forEach(ch=>{
-      const uid = ch.doc.id;
-      if(ch.type === "removed"){
-        const n = list.length; list = list.filter(e=>e.uid !== uid);
-        if(list.length !== n) changed = true;
-      }else if(!have.has(uid)){
-        list.push({ uid, ...ch.doc.data() }); have.add(uid); changed = true;
+    await flushQueue();
+    const today = todayKey();
+    const rows = await fetchFromSheet({ tanggal: today });
+    if(Array.isArray(rows)){
+      const hold = pendingIds(today);
+      const data = await loadAttendance(today);
+      let changed = false;
+      rows.forEach(r=>{
+        if(STATUS[r.status] && !hold.has(String(r.id)) && data[r.id] !== r.status){ data[r.id] = r.status; changed = true; }
+      });
+      if(changed){
+        await saveAttendance(today, data);
+        currentAttendance = { ...data };
+        renderProgress(); renderManualGrid();
+        if(document.getElementById("panel-home").classList.contains("active")) renderHome();
       }
-    });
-    if(changed){
-      try{ localStorage.setItem("log_keluar", JSON.stringify(list)); }catch(e){}
-      renderLogToday("keluar");
     }
-  }, err=> console.error(err)));
-  fbUnsubs.push(classRef().onSnapshot(snap=>{
-    if(snap.metadata.hasPendingWrites || !snap.exists) return;
-    const cfg = snap.data();
-    const sig = JSON.stringify([ cfg.profile && cfg.profile.kelas, cfg.profile && cfg.profile.sekolah, cfg.profile && cfg.profile.guru,
-      cfg.profile && cfg.profile.sapaan, cfg.profile && cfg.profile.kota, (cfg.roster || []).map(r=>[r.id, r.name]) ]);
-    const mine = JSON.stringify([ PROFILE && PROFILE.kelas, PROFILE && PROFILE.sekolah, PROFILE && PROFILE.guru,
-      PROFILE && PROFILE.sapaan, PROFILE && PROFILE.kota, STUDENTS.map(s=>[s.id, s.name]) ]);
-    if(sig !== mine) adoptSheetConfig(cfg);
-  }, err=> console.error(err)));
+    const logs = await fetchLogsFromSheet({ tanggal: today });
+    if(Array.isArray(logs)){
+      let list = [];
+      try{ list = JSON.parse(localStorage.getItem("log_keluar") || "[]"); }catch(e){}
+      const remoteIds = new Set(logs.map(l=>l.uid));
+      const before = list.length;
+      const kept = list.filter(l=> l.tanggal !== today || !l.uid || remoteIds.has(l.uid) || getQueue().some(r=>r.uid === l.uid));
+      const have = new Set(kept.map(l=>l.uid));
+      logs.forEach(l=>{ if(l.uid && !have.has(l.uid)){ kept.push(l); have.add(l.uid); } });
+      if(kept.length !== before || logs.some(l=>!list.find(x=>x.uid === l.uid))){
+        try{ localStorage.setItem("log_keluar", JSON.stringify(kept)); }catch(e){}
+        renderLogToday("keluar");
+      }
+    }
+  }catch(e){ console.error("Sinkron gagal:", e); }
+  pollBusy = false;
 }
-async function pushAllLocalToFirebase(){
-  if(!fbReady || !CLASS_CODE) return;
+function startPolling(){
+  clearInterval(pollTimer);
+  if(!getSheetsUrl()) return;
+  pollTimer = setInterval(pollToday, 20000);
+  if(!pollListener){
+    pollListener = true;
+    document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) pollToday(); });
+    window.addEventListener("online", ()=> pollToday());
+  }
+  pollToday();
+}
+async function pushAllLocalToSheet(){
+  if(!getSheetsUrl() || !CLASS_CODE) return;
   try{
     const keys = await listDateKeys("absensi:");
     for(const k of keys){
       let data = {};
       try{ data = JSON.parse(localStorage.getItem(k) || "{}"); }catch(e){}
-      const records = {};
+      const items = [];
       Object.keys(data).forEach(id=>{
         const s = STUDENTS.find(x=>String(x.id) === String(id));
-        if(s && STATUS[data[id]]) records[id] = { nama:s.name, status:data[id], waktu:"" };
+        if(s && STATUS[data[id]]) items.push({ id:s.id, nama:s.name, status:data[id] });
       });
-      if(Object.keys(records).length) await classRef().collection("attendance").doc(k.slice(8)).set({ records }, { merge:true });
+      if(items.length) await postToSheet({ jenis:"bulk", tanggal:k.slice(8), items, waktu:"" });
     }
     let logs = [];
     try{ logs = JSON.parse(localStorage.getItem("log_keluar") || "[]"); }catch(e){}
-    for(const e of logs){ if(e.uid) await classRef().collection("logs").doc(e.uid).set({ tanggal:e.tanggal, waktu:e.waktu || "", id:e.id, nama:e.nama, keterangan:e.keterangan || "" }); }
-  }catch(e){ console.error("Migrasi data lokal gagal:", e); }
+    for(const e of logs){ if(e.uid) await postToSheet({ jenis:"keluar", uid:e.uid, tanggal:e.tanggal, waktu:e.waktu || "", id:e.id, nama:e.nama, keterangan:e.keterangan || "" }); }
+  }catch(e){ console.error("Kirim data lokal gagal:", e); }
 }
-function classLink(){ return CLASS_CODE ? `${location.origin}${location.pathname}?kelas=${CLASS_CODE}` : ""; }
-function updateClassUi(){
-  const link = document.getElementById("classLinkInput");
-  if(link) link.value = classLink();
-  const st = document.getElementById("fbStatus");
-  if(!st) return;
-  if(!fbConfigured()) st.textContent = "Firebase belum dikonfigurasi (isi file firebase-config.js). Untuk sementara data hanya tersimpan di perangkat ini.";
-  else if(!fbReady) st.textContent = "Firebase gagal terhubung. Cek koneksi internet dan konfigurasi. Data tetap tersimpan di perangkat dan akan dipakai kembali.";
-  else st.textContent = CLASS_CODE ? `Terhubung ke Firebase · Kode kelas: ${CLASS_CODE}` : "Terhubung ke Firebase · kelas belum dibuat.";
-}
-function ensureClassCode(){
-  if(!fbReady || CLASS_CODE) return;
-  CLASS_CODE = genClassCode();
-  try{ localStorage.setItem("activeClass", CLASS_CODE); }catch(e){}
-  try{ history.replaceState(null, "", location.pathname + "?kelas=" + CLASS_CODE); }catch(e){}
-}
-
-const LEGACY_KELAS3_NAMES = [
-  "Ahmad Bilal Al Jamil","Arsyla Romeesa","Azkia Syifa Riannur","Fairuz Nasyita Ramadhani",
-  "Kaisya Dwinda","Muhammad Azril","Muhammad Azzam Kholid","Muhammad Hakan Arroya",
-  "Muhammad Mujadid Fikri","Muhammad Rafa Reynandra","Muhammad Rakha Raffasya",
-  "Muhammad Rayyan Abid Al Ghani","Muhammad Ren Ryuken","Muhammad Rizqi Maulana",
-  "Muhammad Zian Ramadhan","Nadira Almeera Rusadi","Nor Akila Salsabella","Nor Khalisyah",
-  "Raisa Humairah Hifziah","Raisya Dilya Purnama","Raqilla Athafariz Syakiel",
-  "Salsabila Azzahra","Shanayya Adreena Mysha"
-];
 
 const STATUS = {
   hadir:{ label:"Hadir" }, izin:{ label:"Izin" }, sakit:{ label:"Sakit" }, alpa:{ label:"Alpa" }
@@ -1075,7 +1030,6 @@ function loadRoster(){
     const raw = localStorage.getItem("studentsRoster");
     if(raw){ const parsed = JSON.parse(raw); if(Array.isArray(parsed) && parsed.length) return parsed; }
   }catch(e){}
-  if(PROFILE && PROFILE.prefix === LEGACY_PROFILE.prefix) return LEGACY_KELAS3_NAMES.map((name,i)=>({ id:i+1, name }));
   return [];
 }
 function saveRoster(){
@@ -1197,29 +1151,42 @@ document.querySelectorAll(".side-item").forEach(btn=>{
 function getSheetsUrl(){ try{ return localStorage.getItem("sheetsUrl") || ""; }catch(e){ return ""; } }
 function setSheetsUrl(url){ try{ localStorage.setItem("sheetsUrl", url); }catch(e){} }
 
-async function fetchFromSheet(params){
-  if(fbReady && (params.tanggal || params.bulan)){
-    const rows = await fbFetch(params);
-    if(rows !== null) return rows;
-  }
+const sheetCache = {};
+async function callSheet(record){
   const base = getSheetsUrl();
   if(!base) return null;
   try{
-    const qs = new URLSearchParams({ ...params, kode: CLASS_CODE }).toString();
-    const res = await fetch(`${base}?${qs}`);
+    const body = { ...record, kode: CLASS_CODE, kelasNama: (PROFILE && PROFILE.kelas) || "" };
+    if(body.status && !body.jenis && body.waktu === undefined){ const n = new Date(); body.waktu = `${pad(n.getHours())}:${pad(n.getMinutes())}`; }
+    const res = await fetch(base, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(body) });
     if(!res.ok) return null;
-    return await res.json();
+    try{ return await res.json(); }catch(e){ return { ok:true }; }
   }catch(e){ return null; }
 }
 async function postToSheet(record){
-  fbWrite(record);
-  const base = getSheetsUrl();
-  if(!base) return false;
-  try{
-    const res = await fetch(base, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify({ ...record, kode: CLASS_CODE, kelasNama: (PROFILE && PROFILE.kelas) || "" }) });
-    return res.ok;
-  }catch(e){ return false; }
+  if(!getSheetsUrl() || !CLASS_CODE) return false;
+  Object.keys(sheetCache).forEach(k=> delete sheetCache[k]);
+  const res = await callSheet(record);
+  const ok = !!(res && res.ok);
+  if(!ok) queueRecord(record);
+  return ok;
 }
+async function getFromSheet(params, ttl){
+  const base = getSheetsUrl();
+  if(!base || !CLASS_CODE) return null;
+  const qs = new URLSearchParams({ ...params, kode: CLASS_CODE }).toString();
+  const hit = sheetCache[qs];
+  if(ttl && hit && Date.now() - hit.t < ttl) return hit.v;
+  try{
+    const res = await fetch(`${base}?${qs}`);
+    if(!res.ok) return null;
+    const v = await res.json();
+    if(ttl) sheetCache[qs] = { t:Date.now(), v };
+    return v;
+  }catch(e){ return null; }
+}
+async function fetchFromSheet(params){ return getFromSheet(params, params.bulan ? 15000 : 0); }
+async function fetchLogsFromSheet(params){ return getFromSheet({ ...params, logs:"1" }, 0); }
 
 // ---------- storage ----------
 const hasCloudStorage = (typeof window.storage !== "undefined" && !!window.storage);
@@ -1251,7 +1218,7 @@ async function listDateKeys(prefix){
   return keys;
 }
 
-// ---------- cuaca & kualitas udara (Barabai) ----------
+// ---------- cuaca & kualitas udara ----------
 async function loadWeatherWidget(){
   const el = document.getElementById("weatherWidget");
   if(!el) return;
@@ -1273,7 +1240,7 @@ async function loadWeatherWidget(){
   }catch(e){}
 
   let aqiCard = "";
-  const isHst = /barabai|hulu sungai tengah|\bhst\b/i.test(p.kota || "");
+  const isHst = false;
   if(isHst) try{
     const res = await fetch("https://disdik.hstkab.go.id/udara-hst");
     const html = await res.text();
@@ -1707,7 +1674,7 @@ function deleteLogEntry(mode, uid){
   try{ list = JSON.parse(localStorage.getItem(key) || "[]"); }catch(e){}
   list = list.filter(e => e.uid !== uid);
   try{ localStorage.setItem(key, JSON.stringify(list)); }catch(e){}
-  fbDeleteLog(uid);
+  postToSheet({ jenis:"hapus_keluar", uid });
   renderLogToday(mode);
   showToast("Catatan dihapus");
 }
@@ -1982,7 +1949,7 @@ document.getElementById("fillAllHadirBtn").addEventListener("click", async ()=>{
   const data = await loadAttendance(dk);
   belum.forEach(s=>{ data[s.id] = "hadir"; });
   await saveAttendance(dk, data);
-  belum.forEach(s=> postToSheet({ tanggal: dk, id: s.id, nama: s.name, status:"hadir", waktu:"" }));
+  postToSheet({ jenis:"bulk", tanggal: dk, items: belum.map(s=>({ id:s.id, nama:s.name, status:"hadir" })), waktu:"" });
   if(dk === todayKey()){ currentAttendance = { ...data }; renderProgress(); renderManualGrid(); }
   showToast(`${belum.length} siswa ditandai Hadir`);
   renderRecap(dk); decorateCalendar();
@@ -2188,11 +2155,11 @@ function applyProfile(){
   setText("pGuru", p.guru || "Nama Guru");
   setText("pPeran", `Wali ${kelas}`);
   const foot = document.getElementById("sidebarFooter");
-  if(foot) foot.innerHTML = `Absen ${escHtml(kelas)} ${escHtml(sekolah)}<br>Design by Akhmad Fitra Harry, S.Pd`;
+  if(foot) foot.innerHTML = `Absen ${escHtml(kelas)} ${escHtml(sekolah)}<br>Absen Sekolah`;
   setText("greetSchool", sekolah);
   setText("greetTitle", `Selamat datang, ${p.sapaan || p.guru || "Bapak/Ibu Guru"} 👋`);
   setText("qrTitle", `Kartu QR — ${kelas} ${sekolah}`.trim());
-  setText("aboutName", `Absen Online — ${kelas}`);
+  setText("aboutName", `Absen Sekolah — ${kelas}`);
   setText("aboutSchool", sekolah);
   setText("weatherTitle", `Cuaca & Kualitas Udara${p.kota ? " — " + p.kota : ""}`);
   setText("profileSummary", PROFILE ? `${kelas}${sekolah ? " · " + sekolah : ""}${p.guru ? " · " + p.guru : ""}${p.kota ? " · " + p.kota : ""}` : "Identitas kelas belum diisi.");
@@ -2230,24 +2197,21 @@ async function scriptSupportsConfig(){
 let syncTimer = null, lastSyncedSig = "";
 function configSig(){
   const p = PROFILE || {};
-  return JSON.stringify([ p.kelas, p.sekolah, p.guru, p.sapaan, p.kota, p.prefix, getSheetsUrl(), STUDENTS.map(s=>[s.id, s.name]) ]);
+  return JSON.stringify([ p.kelas, p.sekolah, p.guru, p.sapaan, p.kota, p.prefix, STUDENTS.map(s=>[s.id, s.name]) ]);
 }
 function syncConfigToSheet(){
-  if(!PROFILE) return;
-  if(!getSheetsUrl() && !(fbReady && CLASS_CODE)) return;
+  if(!PROFILE || !getSheetsUrl() || !CLASS_CODE) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(async ()=>{
     const sig = configSig();
     if(sig === lastSyncedSig) return;
-    lastSyncedSig = sig;
     const p = PROFILE;
-    const payload = {
+    const ok = await postToSheet({
       jenis:"config",
       profile:{ kelas:p.kelas, sekolah:p.sekolah||"", guru:p.guru||"", sapaan:p.sapaan||"", kota:p.kota||"", prefix:p.prefix },
       roster: STUDENTS.map(s=>({ id:s.id, name:s.name }))
-    };
-    if(getSheetsUrl() && !(await scriptSupportsConfig())){ fbWrite(payload); return; }
-    await postToSheet(payload);
+    });
+    if(ok) lastSyncedSig = sig;
   }, 700);
 }
 function sameRoster(a, b){
@@ -2267,11 +2231,6 @@ async function adoptSheetConfig(cfg){
     else if(np.kota){ const g = await geocodeKota(np.kota); if(g){ np.lat = g.lat; np.lon = g.lon; } }
     PROFILE = np; saveProfileObj(np); CODE_PREFIX = np.prefix;
   }
-  if(cfg.sheetsUrl && cfg.sheetsUrl !== getSheetsUrl()){
-    setSheetsUrl(cfg.sheetsUrl);
-    const inp = document.getElementById("sheetsUrlInput"); if(inp) inp.value = cfg.sheetsUrl;
-    updateSheetsStatusLabel();
-  }
   for(const fn of [applyProfile, afterRosterChange, renderHome, loadWeatherWidget]){
     try{ await fn(); }catch(err){ console.error("Gagal menyegarkan tampilan:", err); }
   }
@@ -2279,7 +2238,8 @@ async function adoptSheetConfig(cfg){
 }
 async function connectSheets(url){
   setSheetsUrl(url); updateSheetsStatusLabel();
-  if(!url){ showToast("Koneksi Google Sheets dihapus"); return; }
+  if(!url){ clearInterval(pollTimer); updateClassUi(); showToast("Koneksi Google Sheets dihapus"); return; }
+  if(PROFILE) ensureClassCode();
   showToast("Menghubungkan ke Google Sheets...");
   const cfg = await fetchConfig(url);
   if(!cfg || Array.isArray(cfg)){
@@ -2289,15 +2249,19 @@ async function connectSheets(url){
   cfgOkUrl = url;
   const sheetRoster = Array.isArray(cfg.roster) ? cfg.roster : [];
   if(sheetRoster.length && STUDENTS.length === 0){
-    await adoptSheetConfig(cfg); showToast("Data kelas dimuat dari Google Sheets"); return;
+    await adoptSheetConfig(cfg); updateClassUi(); startPolling(); showToast("Data kelas dimuat dari Google Sheets"); return;
   }
   if(sheetRoster.length && !sameRoster(sheetRoster, STUDENTS)){
     const nm = cfg.profile && cfg.profile.kelas ? ` (${cfg.profile.kelas})` : "";
     if(confirm(`Google Sheets ini sudah berisi ${sheetRoster.length} siswa${nm}.\n\nOK = pakai data dari Google Sheets\nBatal = timpa Google Sheets dengan data di perangkat ini`)){
-      await adoptSheetConfig(cfg); showToast("Data kelas dimuat dari Google Sheets"); return;
+      await adoptSheetConfig(cfg); updateClassUi(); startPolling(); showToast("Data kelas dimuat dari Google Sheets"); return;
     }
   }
+  lastSyncedSig = "";
   syncConfigToSheet();
+  await pushAllLocalToSheet();
+  updateClassUi();
+  startPolling();
   showToast("Terhubung ke Google Sheets");
 }
 
@@ -2369,7 +2333,7 @@ document.getElementById("setupSaveBtn").addEventListener("click", async ()=>{
   const url = $("setupUrl").value.trim();
   if(url !== getSheetsUrl()){ setSheetsUrl(url); document.getElementById("sheetsUrlInput").value = url; updateSheetsStatusLabel(); }
   btn.disabled = false; closeSetup();
-  for(const fn of [ensureClassCode, applyProfile, afterRosterChange, renderHome, loadWeatherWidget, syncConfigToSheet, startFbSubs, updateClassUi]){
+  for(const fn of [ensureClassCode, applyProfile, afterRosterChange, renderHome, loadWeatherWidget, syncConfigToSheet, startPolling, updateClassUi]){
     try{ await fn(); }catch(err){ console.error("Gagal menyegarkan tampilan:", err); }
   }
   showToast("Identitas kelas disimpan");
@@ -2441,20 +2405,23 @@ if("serviceWorker" in navigator && location.protocol.startsWith("http")){
 // ---------- kelas: salin link, kelas baru, gabung dengan kode ----------
 document.getElementById("copyLinkBtn").addEventListener("click", async ()=>{
   const link = classLink();
-  if(!link){ showToast("Kelas belum dibuat atau Firebase belum terhubung"); return; }
+  if(!link){ showToast("Kelas belum dibuat. Isi identitas kelas dulu."); return; }
+  if(!getSheetsUrl()){ showToast("Hubungkan Google Sheets dulu agar link bisa dipakai di perangkat lain"); return; }
   try{ await navigator.clipboard.writeText(link); showToast("Link kelas disalin"); }
   catch(e){ const i = document.getElementById("classLinkInput"); i.select(); document.execCommand("copy"); showToast("Link kelas disalin"); }
 });
 document.getElementById("newClassBtn").addEventListener("click", ()=>{
-  if(!confirm("Buat kelas baru?\n\nData kelas saat ini tetap aman di Firebase dan bisa dibuka lagi lewat link-nya. Simpan dulu link kelas ini jika belum.")) return;
+  if(!confirm("Buat kelas baru?\n\nData kelas saat ini tetap aman di Google Sheets dan bisa dibuka lagi lewat link-nya. Simpan dulu link kelas ini jika belum.")) return;
+  const url = getSheetsUrl();
   clearClassCache();
   try{ localStorage.removeItem("activeClass"); }catch(e){}
-  location.href = location.pathname;
+  location.href = location.pathname + (url ? `?s=${encodeURIComponent(url)}` : "");
 });
 document.getElementById("joinClassBtn").addEventListener("click", ()=>{
   const code = document.getElementById("joinCodeInput").value.toUpperCase().replace(/[^A-Z0-9]/g,"");
   if(code.length < 8){ showToast("Kode kelas minimal 8 karakter"); return; }
-  location.href = `${location.pathname}?kelas=${code}`;
+  const url = getSheetsUrl();
+  location.href = `${location.pathname}?kelas=${code}` + (url ? `&s=${encodeURIComponent(url)}` : "");
 });
 
 // ---------- ekspor Excel (.xlsx) ----------
@@ -2482,8 +2449,8 @@ async function getLogs(prefixOrMonth){
   let list = [];
   try{ list = JSON.parse(localStorage.getItem("log_keluar") || "[]"); }catch(e){}
   list = list.filter(e=> e.tanggal && e.tanggal.startsWith(prefixOrMonth));
-  if(prefixOrMonth.length === 7){
-    const remote = await fbFetchLogs(prefixOrMonth);
+  const remote = await fetchLogsFromSheet(prefixOrMonth.length === 7 ? { bulan: prefixOrMonth } : { tanggal: prefixOrMonth });
+  if(Array.isArray(remote)){
     const have = new Set(list.map(e=>e.uid));
     remote.forEach(e=>{ if(!have.has(e.uid)) list.push(e); });
   }
@@ -2550,41 +2517,44 @@ document.getElementById("downloadDailyXlsxBtn").addEventListener("click", async 
   XLSX.writeFile(wb, `Absensi_${slugName(p.kelas)}_${dateKey}.xlsx`);
 });
 
-// ---------- mulai: sambungkan Firebase lalu muat kelas ----------
-async function bootClass(){
-  const ok = await initFirebase();
-  updateClassUi();
-  if(!ok){
-    if(!PROFILE) openSetup(true);
-    else if(getSheetsUrl()){ try{ syncConfigToSheet(); }catch(e){} }
-    return;
+document.getElementById("makeSheetRekapBtn").addEventListener("click", async ()=>{
+  const msg = document.getElementById("rekapSheetMsg");
+  if(!getSheetsUrl()){ showToast("Hubungkan Google Sheets dulu di Pengaturan"); return; }
+  const monthKey = document.getElementById("monthlyDate").value || todayKey().slice(0,7);
+  showToast("Membuat rekap di Google Sheets...");
+  await flushQueue();
+  const res = await callSheet({ jenis:"rekap", bulan: monthKey });
+  msg.style.display = "block";
+  if(res && res.ok && res.url){
+    msg.innerHTML = `Rekap ${escHtml(formatBulanIndo(monthKey))} sudah dibuat di tab <b>${escHtml(res.sheet)}</b>. <a href="${escHtml(res.url)}" target="_blank" rel="noopener">Buka Google Sheets</a>`;
+  }else{
+    msg.textContent = "Gagal membuat rekap. Pastikan Code.gs terbaru sudah di-deploy ulang (Deploy > Manage deployments > New version).";
   }
-  if(CLASS_CODE){
-    let snap = null;
-    try{ snap = await classRef().get(); }catch(e){ console.error(e); }
-    if(snap && snap.exists){
-      await adoptSheetConfig(snap.data());
-      updateClassUi();
-    }else if(PROFILE){
-      lastSyncedSig = "";
-      syncConfigToSheet();
-      await pushAllLocalToFirebase();
-    }else{
-      openSetup(true);
-    }
+});
+
+// ---------- mulai: muat kelas dari Google Sheets ----------
+async function bootClass(){
+  updateClassUi();
+  const url = getSheetsUrl();
+  if(!url){ if(!PROFILE) openSetup(true); return; }
+  if(!CLASS_CODE){
+    if(PROFILE) ensureClassCode();
+    else { openSetup(true); return; }
+  }
+  updateClassUi();
+  const cfg = await fetchConfig(url);
+  if(cfg && !Array.isArray(cfg) && Array.isArray(cfg.roster) && cfg.roster.length){
+    await adoptSheetConfig(cfg);
   }else if(PROFILE){
-    // data lama (sebelum ada Firebase): buat kode kelas dan pindahkan ke Firebase
-    ensureClassCode();
-    updateClassUi();
     lastSyncedSig = "";
     syncConfigToSheet();
-    await pushAllLocalToFirebase();
-    showToast("Data kelas dipindahkan ke Firebase");
+    await pushAllLocalToSheet();
   }else{
     openSetup(true);
+    return;
   }
-  startFbSubs();
   updateClassUi();
+  startPolling();
 }
 
 applyProfile();
