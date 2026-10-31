@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Absen Sekolah">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="icon" type="image/png" href="icons/favicon.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -2414,7 +2414,7 @@ if(isStandalone){
     for(const ic of (m.icons || [])){ const x = await fetch(ic.src, { cache:"no-store" }); if(!x.ok) throw 0; }
   }catch(e){
     const el = document.getElementById("installHint");
-    if(el && !isStandalone) el.textContent += " ⚠ File manifest.webmanifest atau folder icons belum terupload lengkap ke GitHub, sehingga aplikasi belum bisa dipasang.";
+    if(el && !isStandalone) el.textContent += " ⚠ File manifest.webmanifest atau gambar ikon (icon-192.png, icon-512.png, icon-maskable-*.png) belum terupload lengkap ke GitHub, sehingga aplikasi belum bisa dipasang.";
   }
 })();
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
