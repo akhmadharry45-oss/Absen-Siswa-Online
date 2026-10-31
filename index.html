@@ -196,6 +196,14 @@
   .home-greeting .school{ font-size:13px; color:var(--muted); font-weight:700; }
   .home-greeting h1{ font-size:25px; color:var(--primary); margin-top:4px; }
   .home-greeting .date{ font-size:15px; color:var(--ink); font-weight:700; margin-top:8px; display:block; }
+  .notice{ border-radius:14px; padding:14px 16px; margin-bottom:12px; font-size:14px; line-height:1.45; border:1.5px solid; }
+  .notice b{ font-weight:800; }
+  .notice.warn{ background:#fff7e0; border-color:#e8b93a; color:#5c4300; }
+  .notice.danger{ background:#fdeaea; border-color:#d65a5a; color:#6b1d1d; }
+  .notice.info{ background:#e8f1ff; border-color:#7aa7e8; color:#1d3a6b; }
+  .notice .nbtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .notice .nbtns button{ flex:1; min-width:130px; padding:10px 12px; border-radius:10px; border:0; font-weight:700; font-size:14px; cursor:pointer; background:var(--primary); color:#fff; }
+  .notice .nbtns button.alt{ background:#fff; color:#444; border:1.5px solid #bbb; }
   .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
   .stat-card{ border-radius:14px; padding:18px; color:#fff; }
 
@@ -431,6 +439,7 @@
 
   <!-- HOME -->
   <section class="panel active" id="panel-home">
+    <div id="homeNotices"></div>
     <div class="home-greeting">
       <span class="school" id="greetSchool"></span>
       <h1 id="greetTitle">Selamat datang 👋</h1>
@@ -452,6 +461,7 @@
       <div class="stat-grid" id="weatherWidget">
         <div class="stat-card" style="background:var(--muted); grid-column:1/-1;"><span class="l">Memuat data cuaca...</span></div>
       </div>
+      <div id="hstAirBox" style="display:none; margin-top:16px;"></div>
     </div>
 
     <div class="card" style="margin-top:16px;">
@@ -626,6 +636,7 @@
         <button class="btn-primary" id="backupBtn" style="flex:1; min-width:140px;">Unduh Cadangan</button>
         <button class="btn-primary" id="restoreBtn" style="flex:1; min-width:140px; background:#555;">Pulihkan dari File</button>
       </div>
+      <p class="scan-hint" id="lastBackupInfo" style="text-align:left; margin:0 0 10px;"></p>
       <input type="file" id="restoreFile" accept=".json,application/json" style="display:none;">
       <button class="btn-primary" id="resetAllBtn" style="width:100%; background:#8b2f2f;">Mulai Kelas Baru (hapus data di perangkat ini)</button>
     </div>
@@ -659,6 +670,7 @@
       <p class="scan-hint" id="sheetsStatus" style="text-align:left; margin-top:12px;"></p>
     </div>
     <p class="scan-hint" id="licenseInfo" style="text-align:center; margin:16px 0 0;"></p>
+    <button class="btn-primary" id="renewOpenBtn" style="width:100%; margin-top:8px; background:#555;">Perpanjang / Ganti Kunci Lisensi</button>
     <p style="text-align:center; font-size:13px; font-weight:700; color:var(--muted); margin:18px 0 6px;">Absen Sekolah<br>Design by Akhmad Fitra Harry, S.Pd</p>
   </section>
 
@@ -726,6 +738,26 @@
     <textarea id="licKeyInput" class="text-input" rows="4" placeholder="Tempel kunci aktivasi di sini"></textarea>
     <p class="scan-hint" id="licMsg" style="text-align:left; margin:0 0 10px; min-height:16px;"></p>
     <button class="btn-primary" id="licActivateBtn" style="width:100%;">Aktifkan</button>
+  </div>
+</div>
+
+<div class="setup-overlay" id="renewOverlay" style="z-index:99998;">
+  <div class="setup-box">
+    <h2 style="margin-bottom:6px;">Perpanjang Lisensi</h2>
+    <p class="scan-hint" id="renewCur" style="text-align:left; margin:0 0 14px;"></p>
+    <label class="setup-label">Pilih paket perpanjangan</label>
+    <select id="renewPlan" class="text-input" style="font-size:15px;">
+      <option value="M1">1 Bulan - Rp20.000</option>
+      <option value="M6">6 Bulan - Rp80.000</option>
+      <option value="Y1">1 Tahun - Rp150.000</option>
+    </select>
+    <div class="lic-pay" id="renewPay"></div>
+    <button class="btn-primary" id="renewWaBtn" style="width:100%; margin-bottom:16px;">Perpanjang via WhatsApp</button>
+    <label class="setup-label">Kunci baru (tempel dari WhatsApp)</label>
+    <textarea id="renewKey" class="text-input" rows="4" placeholder="Tempel kunci baru di sini"></textarea>
+    <p class="scan-hint" id="renewMsg" style="text-align:left; margin:0 0 10px; min-height:16px;"></p>
+    <button class="btn-primary" id="renewActivateBtn" style="width:100%;">Aktifkan Kunci Baru</button>
+    <button class="cancel" id="renewCloseBtn">Tutup</button>
   </div>
 </div>
 
@@ -980,6 +1012,44 @@ const HOLIDAYS_2026 = {
   "2026-12-24":"Cuti Bersama Natal",
   "2026-12-25":"Kelahiran Yesus Kristus (Natal)"
 };
+// Tanggal merah 2027 (SKB 3 Menteri). Tanggal Idulfitri/Iduladha dapat berubah mengikuti sidang isbat.
+const HOLIDAYS_2027 = {
+  "2027-01-01":"Tahun Baru 2027 Masehi",
+  "2027-01-05":"Isra Mikraj Nabi Muhammad SAW",
+  "2027-02-05":"Cuti Bersama Imlek",
+  "2027-02-06":"Tahun Baru Imlek 2578 Kongzili",
+  "2027-03-08":"Hari Suci Nyepi (Tahun Baru Saka 1949)",
+  "2027-03-09":"Cuti Bersama Idul Fitri",
+  "2027-03-10":"Idul Fitri 1448 H",
+  "2027-03-11":"Idul Fitri 1448 H",
+  "2027-03-12":"Cuti Bersama Idul Fitri",
+  "2027-03-15":"Cuti Bersama Idul Fitri",
+  "2027-03-25":"Cuti Bersama Wafat Yesus Kristus",
+  "2027-03-26":"Wafat Yesus Kristus",
+  "2027-03-28":"Kebangkitan Yesus Kristus (Paskah)",
+  "2027-05-01":"Hari Buruh Internasional",
+  "2027-05-06":"Kenaikan Yesus Kristus",
+  "2027-05-17":"Idul Adha 1448 H",
+  "2027-05-18":"Cuti Bersama Idul Adha",
+  "2027-05-19":"Cuti Bersama Waisak",
+  "2027-05-20":"Hari Raya Waisak 2571 BE",
+  "2027-06-01":"Hari Lahir Pancasila",
+  "2027-06-06":"Tahun Baru Islam 1449 H",
+  "2027-08-15":"Maulid Nabi Muhammad SAW",
+  "2027-08-17":"Proklamasi Kemerdekaan RI",
+  "2027-12-24":"Cuti Bersama Natal",
+  "2027-12-25":"Kelahiran Yesus Kristus (Natal)",
+  "2027-12-26":"Isra Mikraj Nabi Muhammad SAW"
+};
+const HOLIDAYS = { ...HOLIDAYS_2026, ...HOLIDAYS_2027 };
+// tahun di luar daftar resmi: hanya libur tetap (tanggal sama tiap tahun)
+const HOLIDAYS_FIXED = { "01-01":"Tahun Baru Masehi", "05-01":"Hari Buruh Internasional", "06-01":"Hari Lahir Pancasila", "08-17":"Proklamasi Kemerdekaan RI", "12-25":"Kelahiran Yesus Kristus (Natal)" };
+function holidayName(key){
+  if(HOLIDAYS[key]) return HOLIDAYS[key];
+  const y = key.slice(0,4);
+  if(y === "2026" || y === "2027") return "";
+  return HOLIDAYS_FIXED[key.slice(5)] || "";
+}
 const BULAN_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 let calYear, calMonth;
 function initCalendar(){
@@ -1009,10 +1079,10 @@ function renderCalendar(){
     cell.className = "cal-cell";
     const dow = dateObj.getDay();
     if(dow===0 || dow===6) cell.classList.add("weekend");
-    if(HOLIDAYS_2026[key]){
+    if(holidayName(key)){
       cell.classList.add("holiday");
-      cell.title = HOLIDAYS_2026[key];
-      monthHolidays.push(`🔴 ${d} ${BULAN_NAMES[calMonth]} — ${HOLIDAYS_2026[key]}`);
+      cell.title = holidayName(key);
+      monthHolidays.push(`🔴 ${d} ${BULAN_NAMES[calMonth]} — ${holidayName(key)}`);
     }
     if(key === todayStr) cell.classList.add("today");
     cell.innerHTML = `<span>${d}</span>`;
@@ -1054,7 +1124,7 @@ async function decorateCalendar(){
     cell.classList.remove("done","missed");
     if(done.has(key)){ cell.classList.add("done"); return; }
     const dow = new Date(key + "T00:00:00").getDay();
-    if(first && key >= first && key < today && dow !== 0 && dow !== 6 && !HOLIDAYS_2026[key]) cell.classList.add("missed");
+    if(first && key >= first && key < today && dow !== 0 && dow !== 6 && !holidayName(key)) cell.classList.add("missed");
   });
 }
 document.getElementById("calPrev").addEventListener("click", ()=>{
@@ -1261,6 +1331,34 @@ async function listDateKeys(prefix){
 }
 
 // ---------- cuaca & kualitas udara ----------
+// ---------- kualitas udara realtime Disdik HST (khusus Barabai / Hulu Sungai Tengah) ----------
+const HST_AIR_URL = "https://disdik.hstkab.go.id/udara-hst/realtime.html";
+function renderHstAir(show){
+  const box = document.getElementById("hstAirBox");
+  if(!box) return;
+  if(!show){ box.style.display = "none"; return; }
+  box.style.display = "";
+  if(box.dataset.ready === "1") return;
+  box.dataset.ready = "1";
+  box.innerHTML = `
+    <h4 style="margin:0 0 6px; font-size:15px;">Kualitas Udara Realtime (ISPU)</h4>
+    <p class="scan-hint" style="text-align:left; margin:0 0 10px;">Data resmi Dinas Pendidikan Kab. Hulu Sungai Tengah: stasiun Kandangan (acuan resmi), Murung Pudak, dan estimasi satelit Barabai, lengkap dengan riwayat 24 jam dan saran kesehatan.</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <a class="btn-primary" id="hstOpenLink" href="${HST_AIR_URL}" target="_blank" rel="noopener" style="flex:1; min-width:150px; text-align:center; text-decoration:none; display:inline-block;">Buka Data Realtime</a>
+      <button class="btn-primary" id="hstEmbedBtn" style="flex:1; min-width:150px; background:#555;">Tampilkan di Sini</button>
+    </div>
+    <div id="hstFrameWrap" style="display:none; margin-top:12px;">
+      <iframe id="hstFrame" title="Kualitas udara realtime Disdik HST" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups" style="width:100%; height:560px; border:0; border-radius:12px; background:#fff;"></iframe>
+      <p class="scan-hint" style="text-align:left; margin:8px 0 0;">Jika kotak di atas kosong, situs tidak mengizinkan ditampilkan di dalam aplikasi. Gunakan tombol Buka Data Realtime.</p>
+    </div>`;
+  document.getElementById("hstEmbedBtn").addEventListener("click", ()=>{
+    const wrap = document.getElementById("hstFrameWrap"), fr = document.getElementById("hstFrame");
+    const open = wrap.style.display === "none";
+    wrap.style.display = open ? "" : "none";
+    document.getElementById("hstEmbedBtn").textContent = open ? "Sembunyikan" : "Tampilkan di Sini";
+    if(open && !fr.getAttribute("src")) fr.setAttribute("src", HST_AIR_URL);
+  });
+}
 async function loadWeatherWidget(){
   const el = document.getElementById("weatherWidget");
   if(!el) return;
@@ -1282,30 +1380,8 @@ async function loadWeatherWidget(){
   }catch(e){}
 
   let aqiCard = "";
-  const isHst = false;
-  if(isHst) try{
-    const res = await fetch("https://disdik.hstkab.go.id/udara-hst");
-    const html = await res.text();
-    const ispuMatch = html.match(/PANTAUAN ISPU:\s*<\/?\w*>?\s*(\d+)/i) || html.match(/(\d{1,3})\s*<\/?\w*>?\s*KATEGORI/i);
-    const kategoriMatch = html.match(/KATEGORI\s*<\/?\w*>?\s*([A-ZÀ-ÿ\s]+?)\s*\(PM/i);
-    if(ispuMatch){
-      const ispu = parseInt(ispuMatch[1], 10);
-      const kategori = kategoriMatch ? kategoriMatch[1].trim() : "";
-      let color = STATUS_HEX.hadir;
-      if(ispu > 300) color = "#7E0023";
-      else if(ispu > 200) color = "#8B2FC9";
-      else if(ispu > 100) color = STATUS_HEX.alpa;
-      else if(ispu > 50) color = "#D4C43C";
-      aqiCard = `<div class="stat-card" style="background:${color}"><span class="n">${ispu}</span><span class="l">ISPU HST${kategori ? ": "+kategori : ""}</span></div>`;
-    }
-  }catch(e){}
-
-  if(isHst && !aqiCard){
-    aqiCard = `<div class="stat-card" style="background:var(--muted); grid-column:1/-1;">
-      <span class="l">Data ISPU resmi tidak bisa diambil otomatis oleh browser.</span>
-      <a href="https://disdik.hstkab.go.id/udara-hst" target="_blank" rel="noopener" style="display:inline-block; margin-top:8px; color:#fff; font-weight:700; text-decoration:underline;">Buka Data Resmi Disdik HST →</a>
-    </div>`;
-  }
+  const isHst = /barabai|hulu sungai tengah|\bhst\b/i.test(p.kota || "");
+  renderHstAir(isHst);
 
   el.innerHTML = tempCard + aqiCard;
   if(!tempCard && !aqiCard.includes("stat-card") ){
@@ -1357,6 +1433,7 @@ function renderAttendancePie(counts, belum){
 
 // ---------- home dashboard ----------
 async function renderHome(){
+  try{ renderNotices(); }catch(e){}
   try{ if(calYear !== undefined) decorateCalendar(); }catch(e){}
   document.getElementById("todayLabel").textContent = formatIndoDate(new Date());
   const data = await loadAttendance(todayKey());
@@ -2651,6 +2728,14 @@ document.getElementById("makeSheetRekapBtn").addEventListener("click", async ()=
 });
 
 // ---------- cadangan & pindah data (versi lokal) ----------
+function lsGet(k){ try{ return localStorage.getItem(k) || ""; }catch(e){ return ""; } }
+function lsSet(k,v){ try{ localStorage.setItem(k, v); }catch(e){} }
+function markBackupDone(){ lsSet("lastBackupAt", String(Date.now())); lsSet("backupSnoozeUntil", ""); renderBackupInfo(); renderNotices(); }
+function renderBackupInfo(){
+  const el = document.getElementById("lastBackupInfo"); if(!el) return;
+  const t = Number(lsGet("lastBackupAt"));
+  el.textContent = t ? `Cadangan terakhir: ${formatIndoDate(new Date(t))}` : "Belum pernah mengunduh cadangan.";
+}
 document.getElementById("backupBtn").addEventListener("click", async ()=>{
   const att = {};
   const keys = await listDateKeys("absensi:");
@@ -2664,6 +2749,7 @@ document.getElementById("backupBtn").addEventListener("click", async ()=>{
   a.download = `Cadangan_Absen_${slugName(profileView().kelas)}_${todayKey()}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=> URL.revokeObjectURL(a.href), 3000);
+  markBackupDone();
   showToast("Cadangan diunduh");
 });
 document.getElementById("restoreBtn").addEventListener("click", ()=> document.getElementById("restoreFile").click());
@@ -2684,6 +2770,7 @@ document.getElementById("restoreFile").addEventListener("change", async (ev)=>{
     Object.keys(d.absensi || {}).forEach(k=> localStorage.setItem(`absensi:${k}`, JSON.stringify(d.absensi[k])));
     localStorage.setItem("log_keluar", JSON.stringify(Array.isArray(d.keluar) ? d.keluar : []));
   }catch(e){ showToast("Gagal memulihkan: penyimpanan perangkat penuh"); return; }
+  lsSet("lastBackupAt", String(Date.now()));
   showToast("Data dipulihkan");
   setTimeout(()=> location.reload(), 600);
 });
@@ -2835,7 +2922,92 @@ async function bootClass(){
   startPolling();
 }
 
+// ---------- pengingat di Beranda (lisensi & cadangan) ----------
+function licDaysLeft(info){
+  if(!info || !info.ok || info.exp === "0") return null;
+  const t = info.exp.replace(/^T/, "");
+  const end = new Date(+t.slice(0,4), +t.slice(4,6)-1, +t.slice(6,8));
+  const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((end - today) / 86400000);
+}
+function licDateLabel(info){ const t = info.exp.replace(/^T/, ""); return `${t.slice(6)}-${t.slice(4,6)}-${t.slice(0,4)}`; }
+async function hasAttendanceData(){
+  try{ return (await listDateKeys("absensi:")).length > 0; }catch(e){ return false; }
+}
+async function renderNotices(){
+  const box = document.getElementById("homeNotices"); if(!box) return;
+  const parts = [];
+  const left = licDaysLeft(licenseInfo);
+  if(left !== null && left <= 7){
+    const when = left <= 0 ? "berakhir <b>hari ini</b>" : `tersisa <b>${left} hari</b> (berakhir ${licDateLabel(licenseInfo)})`;
+    parts.push(`<div class="notice ${left <= 2 ? "danger" : "warn"}">⏰ Masa berlaku lisensi ${licenseInfo.trial ? "percobaan " : ""}${when}. Perpanjang sekarang agar aplikasi tidak terkunci.<div class="nbtns"><button data-act="renew">Perpanjang via WhatsApp</button></div></div>`);
+  }
+  if(await hasAttendanceData()){
+    const last = Number(lsGet("lastBackupAt")) || Number(lsGet("firstUseAt")) || Date.now();
+    const days = Math.floor((Date.now() - last) / 86400000);
+    const snooze = Number(lsGet("backupSnoozeUntil")) || 0;
+    if(days >= 7 && Date.now() >= snooze){
+      const txt = lsGet("lastBackupAt") ? `Terakhir cadangan <b>${days} hari lalu</b>.` : `Data absen belum pernah dicadangkan.`;
+      parts.push(`<div class="notice info">💾 ${txt} Unduh cadangan agar data aman jika HP hilang atau data browser terhapus.<div class="nbtns"><button data-act="backup">Unduh Cadangan</button><button class="alt" data-act="snooze">Nanti (3 hari)</button></div></div>`);
+    }
+  }
+  box.innerHTML = parts.join("");
+}
+document.getElementById("homeNotices").addEventListener("click", (e)=>{
+  const a = e.target && e.target.getAttribute && e.target.getAttribute("data-act");
+  if(a === "renew") openRenew();
+  else if(a === "backup") document.getElementById("backupBtn").click();
+  else if(a === "snooze"){ lsSet("backupSnoozeUntil", String(Date.now() + 3*86400000)); renderNotices(); }
+});
+
+// ---------- perpanjang lisensi tanpa menunggu habis ----------
+function openRenew(){
+  const $ = id => document.getElementById(id);
+  const left = licDaysLeft(licenseInfo);
+  $("renewCur").textContent = licenseText(licenseInfo) + (left !== null ? ` (sisa ${Math.max(left,0)} hari)` : "") + ". Kunci baru akan menggantikan kunci lama jika masa berlakunya lebih panjang.";
+  const sel = $("renewPlan");
+  $("renewMsg").textContent = ""; $("renewKey").value = "";
+  const refresh = ()=>{ const pl = LICENSE_PLANS[sel.value];
+    $("renewPay").innerHTML = `Paket <b>${pl.nama}</b>: <b>${rupiah(pl.harga)}</b>.<br>Transfer via <b>DANA ${LICENSE_DANA}</b>, lalu kirim <b>bukti transfer</b> lewat tombol WhatsApp di bawah.`; };
+  sel.onchange = refresh; refresh();
+  $("renewOverlay").classList.add("open");
+}
+(function(){
+  const $ = id => document.getElementById(id);
+  $("renewOpenBtn").addEventListener("click", openRenew);
+  $("renewCloseBtn").addEventListener("click", ()=> $("renewOverlay").classList.remove("open"));
+  $("renewWaBtn").addEventListener("click", ()=>{
+    const pl = LICENSE_PLANS[$("renewPlan").value];
+    const nama = lsGet("licName");
+    const teks = `Halo, saya ingin memperpanjang aplikasi Absen Sekolah.${nama ? "\nNama: " + nama : ""}\nPaket: ${pl.nama} (${rupiah(pl.harga)})\nPembayaran via DANA ${LICENSE_DANA} (bukti transfer saya lampirkan di chat ini)\nMasa berlaku saat ini: ${licenseText(licenseInfo)}\nKode Permintaan: ${fmtCode(deviceCode())}`;
+    window.open(`https://wa.me/${LICENSE_WA}?text=${encodeURIComponent(teks)}`, "_blank");
+  });
+  $("renewActivateBtn").addEventListener("click", async ()=>{
+    const key = $("renewKey").value;
+    if(!key.trim()){ $("renewMsg").textContent = "Tempel kunci baru dulu."; return; }
+    const r = await verifyLicenseKey(key, deviceCode());
+    if(!r.ok){
+      $("renewMsg").textContent = r.why === "expired" ? "Kunci ini sudah kedaluwarsa."
+        : r.why === "format" ? "Format kunci tidak dikenali. Salin seluruh kunci."
+        : "Kunci tidak cocok dengan Kode Permintaan perangkat ini.";
+      return;
+    }
+    const cur = licenseInfo.exp.replace(/^T/, ""), nw = r.exp.replace(/^T/, "");
+    const better = cur !== "0" && (nw === "0" || nw > cur);
+    if(!better){ $("renewMsg").textContent = cur === "0" ? "Lisensi Anda sudah selamanya." : "Kunci ini tidak memperpanjang masa berlaku yang sekarang."; return; }
+    lsSet("licKey", key.replace(/\s+/g, ""));
+    if(r.trial) lsSet("licTrialUsed", "1");
+    licenseInfo = r;
+    const li = $("licenseInfo"); if(li) li.textContent = licenseText(r);
+    $("renewOverlay").classList.remove("open");
+    renderNotices();
+    showToast("Lisensi diperpanjang");
+  });
+})();
+
 licenseGate().then(()=>{
+  if(!lsGet("firstUseAt")) lsSet("firstUseAt", String(Date.now()));
+  renderBackupInfo();
   const li = document.getElementById("licenseInfo"); if(li) li.textContent = licenseText(licenseInfo);
   applyProfile();
   initApp();
