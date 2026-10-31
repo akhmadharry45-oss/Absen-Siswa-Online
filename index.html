@@ -657,6 +657,7 @@
       <button class="btn-primary" id="saveSheetsUrlBtn" style="width:100%;">Simpan & Hubungkan</button>
       <p class="scan-hint" id="sheetsStatus" style="text-align:left; margin-top:12px;"></p>
     </div>
+    <p class="scan-hint" id="licenseInfo" style="text-align:center; margin:16px 0 0;"></p>
     <p style="text-align:center; font-size:13px; font-weight:700; color:var(--muted); margin:18px 0 6px;">Absen Sekolah<br>Design by Akhmad Fitra Harry, S.Pd</p>
   </section>
 
@@ -697,6 +698,25 @@
     <textarea id="logNoteInput" class="text-input" placeholder="Tulis keterangan..." style="min-height:80px; resize:vertical;"></textarea>
     <button class="btn-primary" id="logSaveBtn" style="width:100%;">Simpan</button>
     <button class="cancel" id="logCancelBtn">Batal</button>
+  </div>
+</div>
+
+<div class="setup-overlay" id="licenseOverlay" style="background:#0d1117; z-index:99999;">
+  <div class="setup-box">
+    <h2 style="margin-bottom:6px;">Aktivasi Absen Sekolah</h2>
+    <p class="scan-hint" style="text-align:left; margin:0 0 14px;">Aplikasi ini perlu diaktifkan dengan kunci izin. Kirim <b>Kode Permintaan</b> di bawah ke WhatsApp pembuat aplikasi, lalu masukkan kunci yang Anda terima.</p>
+    <label class="setup-label">Nama sekolah / guru (opsional, ikut terkirim)</label>
+    <input type="text" id="licName" class="text-input" placeholder="contoh: SDN 1 Contoh / Ibu Siti">
+    <label class="setup-label">Kode Permintaan</label>
+    <input type="text" id="licCode" class="text-input" readonly style="font-weight:800; letter-spacing:2px; text-align:center;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+      <button class="btn-primary" id="licWaBtn" style="flex:2; min-width:170px;">Kirim ke WhatsApp</button>
+      <button class="btn-primary" id="licCopyBtn" style="flex:1; min-width:100px; background:#555;">Salin Kode</button>
+    </div>
+    <label class="setup-label">Kunci Aktivasi (tempel dari WhatsApp)</label>
+    <textarea id="licKeyInput" class="text-input" rows="4" placeholder="Tempel kunci aktivasi di sini"></textarea>
+    <p class="scan-hint" id="licMsg" style="text-align:left; margin:0 0 10px; min-height:16px;"></p>
+    <button class="btn-primary" id="licActivateBtn" style="width:100%;">Aktifkan</button>
   </div>
 </div>
 
@@ -2641,6 +2661,93 @@ document.getElementById("resetAllBtn").addEventListener("click", ()=>{
   location.href = location.pathname;
 });
 
+// ---------- lisensi (kunci izin dari pembuat aplikasi) ----------
+const LICENSE_WA = "6285251029809";
+const LICENSE_PUBLIC_KEY = {"ext": true, "kty": "EC", "x": "MrgodZMC_Sn2L10U4U-BDoo1cFYQkqhrZZoCekECeLw", "y": "E3wzfcetDZIVVcb4ecU-ztaGLuCk6sCTWfGADOgOjDU", "crv": "P-256"};
+let licenseInfo = null;
+function b64uToBytes(s){
+  s = s.replace(/-/g,"+").replace(/_/g,"/");
+  while(s.length % 4) s += "=";
+  const bin = atob(s), u = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i);
+  return u;
+}
+function deviceCode(){
+  let c = "";
+  try{ c = localStorage.getItem("licDevice") || ""; }catch(e){}
+  if(!/^[A-Z0-9]{8}$/.test(c)){
+    const ch = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const a = new Uint32Array(8); crypto.getRandomValues(a);
+    c = ""; for(let i=0;i<8;i++) c += ch[a[i] % ch.length];
+    try{ localStorage.setItem("licDevice", c); }catch(e){}
+  }
+  return c;
+}
+function fmtCode(c){ return c.slice(0,4) + "-" + c.slice(4); }
+async function verifyLicenseKey(key, code){
+  key = String(key || "").replace(/\s+/g, "");
+  const i = key.indexOf(".");
+  if(i < 1) return { ok:false, why:"format" };
+  const exp = key.slice(0, i), sig = key.slice(i + 1);
+  if(!/^(0|\d{8})$/.test(exp)) return { ok:false, why:"format" };
+  let ok = false;
+  try{
+    const pub = await crypto.subtle.importKey("jwk", LICENSE_PUBLIC_KEY, { name:"ECDSA", namedCurve:"P-256" }, false, ["verify"]);
+    ok = await crypto.subtle.verify({ name:"ECDSA", hash:"SHA-256" }, pub, b64uToBytes(sig), new TextEncoder().encode(`ABSEN|${code}|${exp}`));
+  }catch(e){ return { ok:false, why:"format" }; }
+  if(!ok) return { ok:false, why:"invalid" };
+  if(exp !== "0" && todayKey().replace(/-/g, "") > exp) return { ok:false, why:"expired", exp };
+  return { ok:true, exp };
+}
+function licenseText(info){
+  if(!info || !info.ok) return "";
+  if(info.exp === "0") return "Lisensi aktif · selamanya";
+  return `Lisensi aktif sampai ${info.exp.slice(6)}-${info.exp.slice(4,6)}-${info.exp.slice(0,4)}`;
+}
+async function licenseGate(){
+  const code = deviceCode();
+  let saved = "";
+  try{ saved = localStorage.getItem("licKey") || ""; }catch(e){}
+  let expiredNote = "";
+  if(saved){
+    const r = await verifyLicenseKey(saved, code);
+    if(r.ok){ licenseInfo = r; return; }
+    if(r.why === "expired") expiredNote = "Masa berlaku lisensi sudah habis. Minta kunci baru ke pembuat aplikasi.";
+  }
+  const $ = id => document.getElementById(id);
+  $("licCode").value = fmtCode(code);
+  $("licMsg").textContent = expiredNote;
+  $("licenseOverlay").classList.add("open");
+  try{ $("licName").value = localStorage.getItem("licName") || ""; }catch(e){}
+  $("licCopyBtn").addEventListener("click", async ()=>{
+    try{ await navigator.clipboard.writeText(fmtCode(code)); $("licMsg").textContent = "Kode permintaan disalin."; }
+    catch(e){ $("licCode").select(); document.execCommand("copy"); $("licMsg").textContent = "Kode permintaan disalin."; }
+  });
+  $("licWaBtn").addEventListener("click", ()=>{
+    const nama = $("licName").value.trim();
+    try{ localStorage.setItem("licName", nama); }catch(e){}
+    const teks = `Halo, saya ingin mengaktifkan aplikasi Absen Sekolah.${nama ? "\nNama: " + nama : ""}\nKode Permintaan: ${fmtCode(code)}`;
+    window.open(`https://wa.me/${LICENSE_WA}?text=${encodeURIComponent(teks)}`, "_blank");
+  });
+  return new Promise(resolve=>{
+    $("licActivateBtn").addEventListener("click", async ()=>{
+      const key = $("licKeyInput").value;
+      if(!key.trim()){ $("licMsg").textContent = "Tempel kunci aktivasi dulu."; return; }
+      const r = await verifyLicenseKey(key, code);
+      if(!r.ok){
+        $("licMsg").textContent = r.why === "expired" ? "Kunci ini sudah kedaluwarsa. Minta kunci baru."
+          : r.why === "format" ? "Format kunci tidak dikenali. Salin seluruh kunci tanpa ada yang terpotong."
+          : "Kunci tidak cocok dengan Kode Permintaan perangkat ini.";
+        return;
+      }
+      try{ localStorage.setItem("licKey", key.replace(/\s+/g, "")); }catch(e){}
+      licenseInfo = r;
+      $("licenseOverlay").classList.remove("open");
+      resolve();
+    });
+  });
+}
+
 // ---------- mulai: muat kelas dari Google Sheets ----------
 async function bootClass(){
   updateClassUi();
@@ -2666,9 +2773,12 @@ async function bootClass(){
   startPolling();
 }
 
-applyProfile();
-initApp();
-bootClass();
+licenseGate().then(()=>{
+  const li = document.getElementById("licenseInfo"); if(li) li.textContent = licenseText(licenseInfo);
+  applyProfile();
+  initApp();
+  bootClass();
+});
 } catch(err) {
   console.error("Aplikasi gagal memuat sepenuhnya:", err);
   const banner = document.createElement("div");
