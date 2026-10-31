@@ -2095,6 +2095,27 @@ function formatBulanIndo(monthKey){
   if(parts.length !== 2) return monthKey;
   return `${BULAN_NAMES[parseInt(parts[1],10)-1]} ${parts[0]}`;
 }
+// ---------- blok tanda tangan (kota, tanggal, wali kelas, nama guru) di bawah tabel rekap ----------
+function tglTandaTangan(){
+  const [y, m, d] = todayKey().split("-");
+  return `${parseInt(d,10)} ${BULAN_NAMES[parseInt(m,10)-1]} ${y}`;
+}
+function signatureRows(ncols){
+  const p = profileView();
+  const off = Math.max(2, ncols - 3);
+  const pad = t => { const r = Array(ncols).fill(""); r[off] = t; return r; };
+  return [
+    [], [],
+    pad(`${p.kota ? p.kota + ", " : ""}${tglTandaTangan()}`),
+    pad(`Wali ${p.kelas}`),
+    pad(""), pad(""), pad(""),
+    pad(p.guru || "(nama guru)")
+  ];
+}
+function csvCell(c){ return /[",\n]/.test(String(c)) ? `"${String(c).replace(/"/g, '""')}"` : String(c); }
+function signatureCsv(ncols){
+  return signatureRows(ncols).map(r=> r.map(csvCell).join(",")).join("\n") + "\n";
+}
 document.getElementById("downloadDailyBtn").addEventListener("click", ()=>{
   let csv = `Rekap Absensi Harian - ${profileView().kelas} ${profileView().sekolah}`.trim() + "\n";
   csv += `Tanggal,${formatTanggalIndo(lastDailyDateKey)}\n`;
@@ -2104,6 +2125,7 @@ document.getElementById("downloadDailyBtn").addEventListener("click", ()=>{
     const st = lastDailyData[s.id];
     csv += `${i+1},"${s.name}",${st ? STATUS[st].label : "Belum absen"},${lastDailyTimes[s.id] || "-"}\n`;
   });
+  csv += signatureCsv(4);
   downloadCSV(`Absensi_${slugName(profileView().kelas)}_${lastDailyDateKey}.csv`, csv);
 });
 document.getElementById("downloadMonthlyBtn").addEventListener("click", ()=>{
@@ -2115,6 +2137,7 @@ document.getElementById("downloadMonthlyBtn").addEventListener("click", ()=>{
     const c = lastMonthlyPerStudent[s.id] || { hadir:0, izin:0, sakit:0, alpa:0 };
     csv += `${i+1},"${s.name}",${c.hadir},${c.izin},${c.sakit},${c.alpa}\n`;
   });
+  csv += signatureCsv(6);
   downloadCSV(`Rekap_Bulanan_${slugName(profileView().kelas)}_${lastMonthlyKey}.csv`, csv);
 });
 
@@ -2473,7 +2496,8 @@ document.getElementById("joinClassBtn").addEventListener("click", ()=>{
 });
 
 // ---------- ekspor Excel (.xlsx) ----------
-function makeSheet(aoa, widths){
+function makeSheet(aoa, widths, sig){
+  if(sig) aoa = aoa.concat(signatureRows(widths ? widths.length : 4));
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   if(widths) ws["!cols"] = widths.map(w=>({ wch:w }));
   return ws;
@@ -2537,8 +2561,8 @@ document.getElementById("downloadMonthlyXlsxBtn").addEventListener("click", asyn
   const logs = await getLogs(monthKey);
   const logRows = [ ["Tanggal","Waktu","Nama","Keterangan"], ...logs.map(e=>[ formatTanggalIndo(e.tanggal), e.waktu || "", e.nama, e.keterangan || "-" ]) ];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, makeSheet(rekap, [5,32,8,8,8,8,16,10]), "Rekap Bulanan");
-  XLSX.utils.book_append_sheet(wb, makeSheet(matrix, [5,32, ...dates.map(()=>4), 5,5,5,5]), "Harian");
+  XLSX.utils.book_append_sheet(wb, makeSheet(rekap, [5,32,8,8,8,8,16,10], true), "Rekap Bulanan");
+  XLSX.utils.book_append_sheet(wb, makeSheet(matrix, [5,32, ...dates.map(()=>4), 5,5,5,5], true), "Harian");
   XLSX.utils.book_append_sheet(wb, makeSheet(logRows, [26,8,30,30]), "Keluar Kelas");
   XLSX.writeFile(wb, `Rekap_${slugName(p.kelas)}_${monthKey}.xlsx`);
 });
@@ -2560,7 +2584,7 @@ document.getElementById("downloadDailyXlsxBtn").addEventListener("click", async 
   const logs = (await getLogs(dateKey));
   const logRows = [ ["Waktu","Nama","Keterangan"], ...logs.map(e=>[ e.waktu || "", e.nama, e.keterangan || "-" ]) ];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, makeSheet(rows, [5,32,14,10]), "Absen Harian");
+  XLSX.utils.book_append_sheet(wb, makeSheet(rows, [5,32,14,10], true), "Absen Harian");
   XLSX.utils.book_append_sheet(wb, makeSheet(logRows, [8,30,30]), "Keluar Kelas");
   XLSX.writeFile(wb, `Absensi_${slugName(p.kelas)}_${dateKey}.xlsx`);
 });
@@ -2605,9 +2629,9 @@ document.getElementById("downloadYearBtn").addEventListener("click", async ()=>{
     ring.push([i+1, s.name, t.hadir, t.izin, t.sakit, t.alpa, totalHari ? Math.round(t.hadir/totalHari*100) + "%" : "0%"]);
   });
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, makeSheet(ring, [5,32,8,8,8,8,10]), "Total");
+  XLSX.utils.book_append_sheet(wb, makeSheet(ring, [5,32,8,8,8,8,10], true), "Total");
   perBulan.forEach(b=>{
-    XLSX.utils.book_append_sheet(wb, makeSheet(b.matrix, [5,32, ...Array(b.n).fill(4), 5,5,5,5,9]), xlsxSafeName(formatBulanIndo(b.mk)));
+    XLSX.utils.book_append_sheet(wb, makeSheet(b.matrix, [5,32, ...Array(b.n).fill(4), 5,5,5,5,9], true), xlsxSafeName(formatBulanIndo(b.mk)));
   });
   XLSX.writeFile(wb, `Rekap_Semua_Bulan_${slugName(p.kelas)}.xlsx`);
 });
